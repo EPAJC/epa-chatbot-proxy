@@ -1,7 +1,7 @@
 const { Configuration, OpenAIApi } = require("openai");
 
 const openai = new OpenAIApi(
-  new Configuration({ apiKey: process.env.OPENAI_API_KEY })
+  new Configuration({ apiKey: process.env.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 })
 );
 
 exports.handler = async (event) => {
