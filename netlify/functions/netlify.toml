@@ -1,9 +1,0 @@
-[build]
-  # point Netlify at your functions folder
-  functions = "netlify/functions"
-  # ensure we run npm install at the root
-  command = "npm install"
-
-[[plugins]]
-  # this plugin will install your root deps for Functions
-  package = "@netlify/plugin-functions-install-core"
