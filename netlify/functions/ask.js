@@ -11,7 +11,7 @@ const CORS = {
 };
 
 exports.handler = async (event) => {
-  // quick exit for preflight
+  // handle preflight CORS
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 200, headers: CORS, body: "" };
   }
@@ -27,7 +27,7 @@ exports.handler = async (event) => {
       ]
     });
 
-    const answer = completion.choices[0].message.content;
+    const answer = completion.choices[0].message.content.trim();
 
     return {
       statusCode: 200,
@@ -35,11 +35,14 @@ exports.handler = async (event) => {
       body: JSON.stringify({ answer })
     };
 
-  } catch (e) {
+  } catch (err) {
+    // log the error so you can see it in Netlify logs
+    console.error("ask.js error:", err);
+
     return {
       statusCode: 500,
       headers: CORS,
-      body: JSON.stringify({ error: e.message })
+      body: JSON.stringify({ answer: null, error: err.message })
     };
   }
 };
