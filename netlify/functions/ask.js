@@ -4,7 +4,21 @@ const openai = new OpenAIApi(
   new Configuration({ apiKey: process.env.OPENAI_API_KEY })
 );
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
 exports.handler = async (event) => {
+  // handle preflight
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers: CORS_HEADERS,
+      body: ""
+    };
+  }
+
   try {
     const { message } = JSON.parse(event.body);
     const resp = await openai.createChatCompletion({
@@ -14,11 +28,18 @@ exports.handler = async (event) => {
         { role: "user",   content: message }
       ]
     });
+
     return {
       statusCode: 200,
+      headers: CORS_HEADERS,
       body: JSON.stringify({ answer: resp.data.choices[0].message.content })
     };
+
   } catch (e) {
-    return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
+    return {
+      statusCode: 500,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: e.message })
+    };
   }
 };
