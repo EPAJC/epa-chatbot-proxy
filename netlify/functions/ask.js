@@ -1,45 +1,48 @@
 // netlify/functions/ask.js
+const OpenAI = require("openai").default;
 
-const { Configuration, OpenAIApi } = require("openai");
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
-// pull your API key and desired model from env
-const API_KEY   = process.env.OPENAI_API_KEY;
-const MODEL_ID  = process.env.OPENAI_MODEL    || "gpt-3.5-turbo";
-const SYSTEMMSG = process.env.OPENAI_SYSTEM   || "You are an AS/NZS 3000 expert.";
-
-if (!API_KEY) {
-  throw new Error("Missing OPENAI_API_KEY environment variable");
-}
-
-const openai = new OpenAIApi(
-  new Configuration({ apiKey: API_KEY })
-);
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
 
 exports.handler = async (event) => {
-  try {
-    const { message } = JSON.parse(event.body || "{}");
-    if (!message) {
-      return { statusCode: 400, body: JSON.stringify({ error: "No message provided" }) };
-    }
+  // handle preflight CORS
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 200, headers: CORS, body: "" };
+  }
 
-    const resp = await openai.createChatCompletion({
-      model: MODEL_ID,
+  try {
+    const { message } = JSON.parse(event.body);
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: SYSTEMMSG },
+        { role: "system", content: "You are an AS/NZS 3000 expert." },
         { role: "user",   content: message }
       ]
     });
 
-    const answer = resp.data.choices?.[0]?.message?.content || "";
+    const answer = completion.choices[0].message.content.trim();
+
     return {
       statusCode: 200,
+      headers: CORS,
       body: JSON.stringify({ answer })
     };
-  }
-  catch (e) {
+
+  } catch (err) {
+    // log the error so you can see it in Netlify logs
+    console.error("ask.js error:", err);
+
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: e.message })
+      headers: CORS,
+      body: JSON.stringify({ answer: null, error: err.message })
     };
   }
 };
