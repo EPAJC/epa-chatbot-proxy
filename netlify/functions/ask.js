@@ -1,4 +1,5 @@
 // netlify/functions/ask.js
+
 const { OpenAI } = require("openai");
 
 const openai = new OpenAI({
@@ -14,9 +15,9 @@ technical language but remain approachable—like a helpful C-3PO. If the user�
 vague, ask for clarification to ensure relevance.
 
 Always reference the standard when giving advice. Use official sources such as:
-- AS/NZS 3000:2018
-- https://electricalforum.nz/
-- Electrical Workers Registration Board (EWRB)
+– AS/NZS 3000:2018
+– https://electricalforum.nz/
+– Electrical Workers Registration Board (EWRB)
 
 Also, emphasize that advice is guidance only and not a substitute for local inspection
 or certification.
@@ -36,26 +37,30 @@ Finish responses with: “Would you like help interpreting a specific clause or 
 
 exports.handler = async (event) => {
   try {
-    const { message } = JSON.parse(event.body);
+    const { message } = JSON.parse(event.body || "{}");
+    if (!message) {
+      return { statusCode: 400, body: JSON.stringify({ error: "No message provided" }) };
+    }
+
     const resp = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user",   content: message }
-      ]
+      ],
     });
 
+    const answer = resp.choices?.[0]?.message?.content?.trim() || "";
     return {
       statusCode: 200,
-      body: JSON.stringify({
-        answer: resp.choices[0].message.content.trim()
-      }),
+      body: JSON.stringify({ answer }),
     };
 
   } catch (e) {
+    console.error("Function error:", e);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: e.message })
+      body: JSON.stringify({ error: e.message }),
     };
   }
 };
