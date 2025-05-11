@@ -1,6 +1,4 @@
 [build]
+  # 1) install root (none)  2) cd into your functions folder and install
+  command   = "npm install && cd netlify/functions && npm install"
   functions = "netlify/functions"
-  command   = "npm install"
-
-[[plugins]]
-package = "@netlify/plugin-functions-install-core"
