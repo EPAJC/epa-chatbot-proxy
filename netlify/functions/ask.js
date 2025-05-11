@@ -1,61 +1,61 @@
 // netlify/functions/ask.js
-
 const { OpenAI } = require("openai");
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,            // ➊
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-exports.handler = async function (event, context) {
-  // only allow POST
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: "Method not allowed" }),
-    };
-  }
+const SYSTEM_PROMPT = `
+You are AI platform 3000, a technical assistant for electricians in New Zealand.
+You specialize in the AS/NZS 3000:2018 standard (especially Part 2), and your goal is
+to help users interpret clauses accurately for real-world installations. You respond
+with clause references where applicable, prioritizing precision and clarity. Use clear
+technical language but remain approachable—like a helpful C-3PO. If the user’s query is
+vague, ask for clarification to ensure relevance.
 
-  let payload;
+Always reference the standard when giving advice. Use official sources such as:
+- AS/NZS 3000:2018
+- https://electricalforum.nz/
+- Electrical Workers Registration Board (EWRB)
+
+Also, emphasize that advice is guidance only and not a substitute for local inspection
+or certification.
+
+Your priorities:
+1. Be technically correct and clause-based.
+2. Be clear and concise.
+3. Ask for clarification if the situation isn’t clear.
+4. Be friendly but professional, never overly casual or jokey.
+5. Provide diagrams if they help explain a clause (and only when relevant).
+6. Always invite users to review the answer (1–5 stars), and escalate answers rated 3
+   or below for review.
+7. Keep the answers short, but with your reference.
+
+Finish responses with: “Would you like help interpreting a specific clause or situation?”
+`;
+
+exports.handler = async (event) => {
   try {
-    payload = JSON.parse(event.body);
-  } catch (e) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: "Invalid JSON" }),
-    };
-  }
-
-  const userMessage = payload.message?.trim();
-  if (!userMessage) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: "No message provided" }),
-    };
-  }
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-3.5-turbo",    // ➋
+    const { message } = JSON.parse(event.body);
+    const resp = await openai.chat.completions.create({
+      model: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
       messages: [
-        {
-          role: "system",
-          content:
-            process.env.OPENAI_SYSTEM ||
-            "You are an AS/NZS 3000 expert.",
-        },                                                  // ➌
-        { role: "user", content: userMessage },
-      ],
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user",   content: message }
+      ]
     });
 
-    const answer = response.choices?.[0]?.message?.content || "";
     return {
       statusCode: 200,
-      body: JSON.stringify({ answer }),
+      body: JSON.stringify({
+        answer: resp.choices[0].message.content.trim()
+      }),
     };
-  } catch (err) {
+
+  } catch (e) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: err.message }),
+      body: JSON.stringify({ error: e.message })
     };
   }
 };
