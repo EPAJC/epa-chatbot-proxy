@@ -1,7 +1,5 @@
 {
-  "name": "ask-function",
+  "name": "epa-chatbot-proxy",
   "version": "1.0.0",
-  "dependencies": {
-    "openai": "^4.0.0"
-  }
+  "license": "MIT"
 }
