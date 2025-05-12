@@ -1,11 +1,5 @@
 // netlify/functions/ask.js
 
-const { OpenAI } = require("openai");
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 const SYSTEM_PROMPT = `
 You are AI platform 3000, a technical assistant for electricians in New Zealand.
 You specialize in the AS/NZS 3000:2018 standard (especially Part 2), and your goal is
@@ -15,9 +9,9 @@ technical language but remain approachable—like a helpful C-3PO. If the user�
 vague, ask for clarification to ensure relevance.
 
 Always reference the standard when giving advice. Use official sources such as:
-– AS/NZS 3000:2018
-– https://electricalforum.nz/
-– Electrical Workers Registration Board (EWRB)
+- AS/NZS 3000:2018
+- https://electricalforum.nz/
+- Electrical Workers Registration Board (EWRB)
 
 Also, emphasize that advice is guidance only and not a substitute for local inspection
 or certification.
@@ -36,28 +30,73 @@ Finish responses with: “Would you like help interpreting a specific clause or 
 `;
 
 exports.handler = async (event) => {
-  try {
-    const { message } = JSON.parse(event.body || "{}");
-    if (!message) {
-      return { statusCode: 400, body: JSON.stringify({ error: "No message provided" }) };
-    }
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: "Method Not Allowed" }),
+    };
+  }
 
-    const resp = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user",   content: message }
-      ],
+  let body;
+  try {
+    body = JSON.parse(event.body);
+  } catch {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: "Invalid JSON" }),
+    };
+  }
+
+  const userMessage = body.message;
+  if (!userMessage) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: "No message provided" }),
+    };
+  }
+
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "Missing OPENAI_API_KEY" }),
+    };
+  }
+
+  const model = process.env.OPENAI_MODEL || "gpt-3.5-turbo";
+
+  try {
+    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT.trim() },
+          { role: "user", content: userMessage },
+        ],
+      }),
     });
 
-    const answer = resp.choices?.[0]?.message?.content?.trim() || "";
+    if (!resp.ok) {
+      const err = await resp.json();
+      return {
+        statusCode: resp.status,
+        body: JSON.stringify({ error: err.error?.message || resp.statusText }),
+      };
+    }
+
+    const { choices } = await resp.json();
+    const answer = (choices?.[0]?.message?.content || "").trim();
+
     return {
       statusCode: 200,
       body: JSON.stringify({ answer }),
     };
-
   } catch (e) {
-    console.error("Function error:", e);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: e.message }),
