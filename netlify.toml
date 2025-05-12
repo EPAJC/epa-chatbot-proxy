@@ -1,5 +1,9 @@
 [build]
-  # no root-level npm install
-  command = "cd netlify/functions && npm install"
+  # Tell Netlify where your functions live
   functions = "netlify/functions"
-  publish = "."
+  # We only need to install deps in our functions folder
+  command   = "npm install && cd netlify/functions && npm install"
+  # We’re not publishing a static site; it’s a proxy only
+  publish   = "/"
+
+# (no plugins needed beyond this point)
