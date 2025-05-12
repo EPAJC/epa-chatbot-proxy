@@ -1,4 +1,5 @@
 [build]
-  # only install in netlify/functions
-  command   = "cd netlify/functions && npm install"
+  # No root-level install needed
+  command = "echo 'Functions only'; cd netlify/functions && npm install"
   functions = "netlify/functions"
+  publish = "."
