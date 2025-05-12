@@ -1,9 +1,10 @@
+# netlify.toml
 [build]
-  # Tell Netlify where your functions live
+  # Point Netlify at your Lambda directory
   functions = "netlify/functions"
-  # We only need to install deps in our functions folder
-  command   = "npm install && cd netlify/functions && npm install"
-  # We’re not publishing a static site; it’s a proxy only
-  publish   = "/"
 
-# (no plugins needed beyond this point)
+  # ONLY install deps in that folder
+  command = "cd netlify/functions && npm install"
+
+  # We're not serving any static files here
+  publish = "/"
