@@ -1,4 +1,9 @@
 // netlify/functions/ask.js
+const { OpenAI } = require("openai");
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 const SYSTEM_PROMPT = `
 You are AI platform 3000, a technical assistant for electricians in New Zealand.
@@ -30,73 +35,31 @@ Finish responses with: “Would you like help interpreting a specific clause or 
 `;
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: "Method Not Allowed" }),
-    };
-  }
-
-  let body;
   try {
-    body = JSON.parse(event.body);
-  } catch {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: "Invalid JSON" }),
-    };
-  }
-
-  const userMessage = body.message;
-  if (!userMessage) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: "No message provided" }),
-    };
-  }
-
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Missing OPENAI_API_KEY" }),
-    };
-  }
-
-  const model = process.env.OPENAI_MODEL || "gpt-3.5-turbo";
-
-  try {
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT.trim() },
-          { role: "user", content: userMessage },
-        ],
-      }),
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json();
+    const { message } = JSON.parse(event.body || "{}");
+    if (!message) {
       return {
-        statusCode: resp.status,
-        body: JSON.stringify({ error: err.error?.message || resp.statusText }),
+        statusCode: 400,
+        body: JSON.stringify({ error: "No message provided" }),
       };
     }
 
-    const { choices } = await resp.json();
-    const answer = (choices?.[0]?.message?.content || "").trim();
+    const resp = await openai.chat.completions.create({
+      model: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT.trim() },
+        { role: "user",   content: message }
+      ],
+    });
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ answer }),
+      body: JSON.stringify({
+        answer: resp.choices[0].message.content.trim()
+      }),
     };
   } catch (e) {
+    console.error(e);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: e.message }),
