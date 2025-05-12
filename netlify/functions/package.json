@@ -1,5 +1,7 @@
 {
   "name": "ask-function",
   "version": "1.0.0",
-  "dependencies": {}
+  "dependencies": {
+    "openai": "^4.0.0"
+  }
 }
